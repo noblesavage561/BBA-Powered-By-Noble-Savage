@@ -3,12 +3,12 @@
 :root {
   --bg: #0a192f;
   --bg-alt: #112240;
-  --text: #e6f1ff;
-  --muted: #9fb3c8;
+  --text: #ffffff;
+  --muted: #c8daf0;
   --accent: #64ffda;
   --alert: #f06292;
-  --glass: rgba(255, 255, 255, 0.09);
-  --glass-strong: rgba(255, 255, 255, 0.16);
+  --glass: rgba(255, 255, 255, 0.12);
+  --glass-strong: rgba(255, 255, 255, 0.22);
 }
 
 * {

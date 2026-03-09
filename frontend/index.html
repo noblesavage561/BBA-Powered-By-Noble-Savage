@@ -4,9 +4,63 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BBA Core Intelligence Hub</title>
+    <style>
+      body{margin:0;min-height:100vh;font-family:system-ui,-apple-system,sans-serif;background:#0a192f;color:#e6f1ff}
+      #bba-loader{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;background:#0a192f}
+      #bba-loader .logo-box{width:80px;height:80px;border-radius:18px;background:linear-gradient(145deg,#64ffda,#95ffea);display:grid;place-items:center;font-size:1.8rem;font-weight:800;color:#053349;margin-bottom:20px}
+      #bba-loader h1{font-size:1.4rem;color:#ffffff;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px}
+      #bba-loader p{color:#bcd4ef;margin:0 0 24px;font-size:.95rem}
+      #bba-loader .bar-track{width:220px;height:6px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
+      #bba-loader .bar-fill{height:100%;width:30%;border-radius:99px;background:#64ffda;animation:loader-slide 1.2s ease-in-out infinite}
+      @keyframes loader-slide{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+      #bba-fallback{display:none;position:fixed;inset:0;z-index:10000;background:#0a192f;color:#ffffff;font-family:system-ui,sans-serif;padding:40px;text-align:center;align-items:center;justify-content:center;flex-direction:column}
+      #bba-fallback h1{color:#64ffda;font-size:1.6rem;letter-spacing:.1em;text-transform:uppercase}
+      #bba-fallback p{color:#bcd4ef;font-size:1rem;max-width:500px;margin:12px auto}
+      #bba-fallback button{margin-top:20px;padding:12px 28px;border:2px solid #64ffda;border-radius:999px;background:transparent;color:#64ffda;font-size:1rem;font-weight:600;cursor:pointer}
+      #bba-fallback button:hover{background:#64ffda;color:#053349}
+      #bba-fallback code{display:block;margin-top:18px;color:#f7a8bf;font-size:.85rem;word-break:break-word;max-width:600px;margin-left:auto;margin-right:auto}
+    </style>
   </head>
   <body>
+    <!-- Loading screen shown until React mounts -->
+    <div id="bba-loader">
+      <div class="logo-box">BBA</div>
+      <h1>BBA Core Intelligence Hub</h1>
+      <p>Initializing command center&hellip;</p>
+      <div class="bar-track"><div class="bar-fill"></div></div>
+    </div>
+
+    <!-- Fallback screen if React fails to mount -->
+    <div id="bba-fallback">
+      <h1>Systems Re-calibrating</h1>
+      <p>The dashboard engine encountered a startup issue. Your data and services are still online.</p>
+      <button onclick="location.reload()">Reload Dashboard</button>
+      <code id="bba-fallback-err"></code>
+    </div>
+
     <div id="root"></div>
+
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Fallback timer: if React hasn't mounted, show error -->
+    <script>
+      (function(){
+        var timer = setTimeout(function(){
+          var root = document.getElementById('root');
+          if(!root || !root.children.length){
+            document.getElementById('bba-loader').style.display='none';
+            var fb = document.getElementById('bba-fallback');
+            fb.style.display='flex';
+            document.getElementById('bba-fallback-err').textContent='React app did not mount within 8 seconds. Check browser console (F12) for errors.';
+          }
+        }, 8000);
+        // Let React clear the timer when it mounts
+        window.__bbaClearLoader = function(){
+          clearTimeout(timer);
+          var loader = document.getElementById('bba-loader');
+          if(loader) loader.style.display='none';
+        };
+      })();
+    </script>
   </body>
 </html>

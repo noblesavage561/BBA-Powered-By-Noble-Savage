@@ -14,23 +14,23 @@ const { graphqlUrl } = getApiConfig();
 const darkTheme = {
   "--bg": "#0A192F",
   "--bg-alt": "#112240",
-  "--text": "#e6f1ff",
-  "--muted": "#9fb3c8",
+  "--text": "#ffffff",
+  "--muted": "#c8daf0",
   "--accent": "#64FFDA",
   "--alert": "#F06292",
-  "--glass": "rgba(255,255,255,0.09)",
-  "--glass-strong": "rgba(255,255,255,0.16)",
+  "--glass": "rgba(255,255,255,0.12)",
+  "--glass-strong": "rgba(255,255,255,0.22)",
 };
 
 const lightTheme = {
-  "--bg": "#f4f8ff",
-  "--bg-alt": "#dfe8ff",
-  "--text": "#10233f",
-  "--muted": "#4f647d",
-  "--accent": "#0f9d88",
-  "--alert": "#d93d77",
-  "--glass": "rgba(255,255,255,0.62)",
-  "--glass-strong": "rgba(255,255,255,0.85)",
+  "--bg": "#e8efff",
+  "--bg-alt": "#d4dffc",
+  "--text": "#0a1628",
+  "--muted": "#2d3e56",
+  "--accent": "#0c8a76",
+  "--alert": "#c22b63",
+  "--glass": "rgba(255,255,255,0.72)",
+  "--glass-strong": "rgba(255,255,255,0.88)",
 };
 
 const SYSTEM_HEALTH_QUERY = `

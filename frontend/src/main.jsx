@@ -54,3 +54,8 @@ createRoot(document.getElementById("root")).render(
     </ErrorBoundary>
   </StrictMode>
 );
+
+// Signal the HTML loader that React mounted successfully
+if (typeof window.__bbaClearLoader === "function") {
+  window.__bbaClearLoader();
+}
