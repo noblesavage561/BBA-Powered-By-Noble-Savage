@@ -1,0 +1,13 @@
+{
+  "name": "bba-graphql-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "apollo-server": "3.13.0",
+    "graphql": "16.10.0"
+  }
+}
