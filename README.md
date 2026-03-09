@@ -7,6 +7,12 @@ Business Intelligence Suite
 
 The frontend API base is dynamically resolved for Codespaces previews. To override manually, provide `NEXT_PUBLIC_API_URL` at build/runtime.
 
+If your browser still shows stale content, use the reset URL once:
+
+`https://<codespace>-3000.app.github.dev/?reset=1`
+
+This clears browser storage/cache entries and reloads with a fresh timestamp.
+
 ### Quick Start (Recommended)
 
 ```bash
