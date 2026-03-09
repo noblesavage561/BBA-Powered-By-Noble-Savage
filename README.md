@@ -3,6 +3,20 @@ Business Intelligence Suite
 
 ## Local Development
 
+### Quick Start (Recommended)
+
+```bash
+./scripts/dev-start.sh
+```
+
+This command builds and starts all services, then runs smoke and frontend checks.
+
+To stop everything:
+
+```bash
+./scripts/dev-stop.sh
+```
+
 ### Run With Docker Compose
 
 ```bash
