@@ -3,6 +3,10 @@ Business Intelligence Suite
 
 ## Local Development
 
+### Frontend API Override
+
+The frontend API base is dynamically resolved for Codespaces previews. To override manually, provide `NEXT_PUBLIC_API_URL` at build/runtime.
+
 ### Quick Start (Recommended)
 
 ```bash

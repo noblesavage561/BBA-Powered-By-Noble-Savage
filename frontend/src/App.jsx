@@ -7,8 +7,9 @@ import { RedisCacheTile } from "./components/monitoring/RedisCacheTile";
 import { ProcessStream } from "./components/monitoring/ProcessStream";
 import { AgentActivityTile } from "./components/monitoring/AgentActivityTile";
 import { useSystemStream } from "./hooks/useSystemStream";
+import { getApiConfig } from "./config/api";
 
-const GRAPHQL_URL = "/graphql";
+const { graphqlUrl } = getApiConfig();
 
 const darkTheme = {
   "--bg": "#0A192F",
@@ -82,17 +83,21 @@ export function App() {
   const [snapshot, setSnapshot] = useState(null);
   const [logs, setLogs] = useState([]);
 
+  const safeHealth = snapshot?.health ?? {};
+  const safeSystemHealth = snapshot?.systemHealth ?? {};
+  const safeGraphql = safeSystemHealth?.graphql ?? {};
+  const safeDatabase = safeSystemHealth?.database ?? {};
+  const safeRedis = safeSystemHealth?.redis ?? {};
+  const safeAgents = safeSystemHealth?.agents ?? {};
+  const safeRecentLogs = safeSystemHealth?.recent_logs ?? [];
+
   useSystemStream({
     onHealthUpdate: (payload) => {
       setSnapshot((prev) => {
-        if (!prev) {
-          return prev;
-        }
-        return { ...prev, systemHealth: payload };
+        const base = prev ?? { health: {}, systemHealth: {} };
+        return { ...base, systemHealth: payload ?? base.systemHealth };
       });
-      if (payload?.recent_logs?.length) {
-        setLogs(payload.recent_logs);
-      }
+      setLogs(payload?.recent_logs ?? []);
     },
     onLog: (log) => {
       setLogs((prev) => [log, ...prev].slice(0, 12));
@@ -105,12 +110,12 @@ export function App() {
     if (!snapshot?.health) {
       return 99.9;
     }
-    const health = snapshot.health;
+    const health = snapshot?.health ?? {};
     let score = health.status === "healthy" ? 99.9 : 86.2;
-    if (!health.db_connected) {
+    if (!health?.db_connected) {
       score -= 7;
     }
-    if (!health.redis_connected) {
+    if (!health?.redis_connected) {
       score -= 6;
     }
     return Math.max(50, +score.toFixed(1));
@@ -125,19 +130,19 @@ export function App() {
       };
     }
 
-    const gql = snapshot.systemHealth.graphql;
-    const db = snapshot.systemHealth.database;
-    const redis = snapshot.systemHealth.redis;
+    const gql = snapshot?.systemHealth?.graphql ?? {};
+    const db = snapshot?.systemHealth?.database ?? {};
+    const redis = snapshot?.systemHealth?.redis ?? {};
 
     let grade = "Excellent";
     let risk = "Low";
     let recommendation = "Operations are stable. Continue standard monitoring cadence.";
 
-    if (gql.errorRate >= 1 || gql.latencyMs >= 300 || redis.hitRate < 85 || db.avgQueryTime >= 150) {
+    if ((gql?.errorRate ?? 0) >= 1 || (gql?.latencyMs ?? 0) >= 300 || (redis?.hitRate ?? 0) < 85 || (db?.avgQueryTime ?? 0) >= 150) {
       grade = "Needs Attention";
       risk = "High";
       recommendation = "Activate incident protocol and assign engineering owner for immediate remediation.";
-    } else if (gql.errorRate >= 0.25 || gql.latencyMs >= 180 || db.avgQueryTime >= 70) {
+    } else if ((gql?.errorRate ?? 0) >= 0.25 || (gql?.latencyMs ?? 0) >= 180 || (db?.avgQueryTime ?? 0) >= 70) {
       grade = "Watch";
       risk = "Medium";
       recommendation = "Track for the next 30 minutes and prepare scale-up if trend continues.";
@@ -157,7 +162,7 @@ export function App() {
     setIsRefreshing(true);
     setError("");
     try {
-      const res = await fetch(GRAPHQL_URL, {
+      const res = await fetch(graphqlUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: SYSTEM_HEALTH_QUERY }),
@@ -166,13 +171,11 @@ export function App() {
         throw new Error(`GraphQL HTTP ${res.status}`);
       }
       const json = await res.json();
-      if (json.errors?.length) {
-        throw new Error(json.errors[0].message || "Query failed");
+      if (json?.errors?.length) {
+        throw new Error(json?.errors?.[0]?.message || "Query failed");
       }
-      setSnapshot(json.data);
-      if (json.data.systemHealth.recent_logs?.length) {
-        setLogs(json.data.systemHealth.recent_logs);
-      }
+      setSnapshot(json?.data ?? { health: {}, systemHealth: {} });
+      setLogs(json?.data?.systemHealth?.recent_logs ?? []);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -189,8 +192,8 @@ export function App() {
   const reconnectView = (
     <motion.section initial={false} animate={{ opacity: 1 }} className="rescue cmd-glass">
       <div className="rescue-graphic">(  x_x )</div>
-      <h2>Service Maintenance in Progress</h2>
-      <p>Telemetry stream is temporarily unavailable. Retry connection to continue live observability.</p>
+      <h2>Systems Re-calibrating</h2>
+      <p>The API telemetry channel is temporarily unavailable. Core UI remains safe and ready to recover.</p>
       <button className="reconnect" onClick={fetchSnapshot}>
         <RefreshCw size={16} /> Reconnect
       </button>
@@ -234,7 +237,7 @@ export function App() {
         </div>
       </motion.header>
 
-      {error || !snapshot ? (
+      {error && !snapshot ? (
         reconnectView
       ) : (
         <>
@@ -262,32 +265,32 @@ export function App() {
 
           <section className="matrix cmd-matrix">
             <GraphQLGatewayTile
-              latencyMs={snapshot.systemHealth.graphql.latencyMs}
-              requestsPerSecond={snapshot.systemHealth.graphql.requestsPerSecond}
-              errorRate={snapshot.systemHealth.graphql.errorRate}
-              historicalData={snapshot.systemHealth.graphql.historicalLatency}
+              latencyMs={safeGraphql?.latencyMs ?? 0}
+              requestsPerSecond={safeGraphql?.requestsPerSecond ?? 0}
+              errorRate={safeGraphql?.errorRate ?? 0}
+              historicalData={safeGraphql?.historicalLatency ?? [0]}
             />
             <DatabasePoolTile
-              activeConnections={snapshot.systemHealth.database.activeConnections}
-              maxConnections={snapshot.systemHealth.database.maxConnections}
-              queryRate={snapshot.systemHealth.database.queryRate}
-              avgQueryTime={snapshot.systemHealth.database.avgQueryTime}
+              activeConnections={safeDatabase?.activeConnections ?? 0}
+              maxConnections={safeDatabase?.maxConnections ?? 100}
+              queryRate={safeDatabase?.queryRate ?? 0}
+              avgQueryTime={safeDatabase?.avgQueryTime ?? 0}
             />
             <RedisCacheTile
-              hitRate={snapshot.systemHealth.redis.hitRate}
-              memoryUsedMb={snapshot.systemHealth.redis.memoryUsedMb}
-              memoryTotalMb={snapshot.systemHealth.redis.memoryTotalMb}
-              keysCount={snapshot.systemHealth.redis.keysCount}
-              connectedClients={snapshot.systemHealth.redis.connectedClients}
+              hitRate={safeRedis?.hitRate ?? 0}
+              memoryUsedMb={safeRedis?.memoryUsedMb ?? 0}
+              memoryTotalMb={safeRedis?.memoryTotalMb ?? 256}
+              keysCount={safeRedis?.keysCount ?? 0}
+              connectedClients={safeRedis?.connectedClients ?? 0}
             />
             <AgentActivityTile
-              active={snapshot.systemHealth.agents.active}
-              pending={snapshot.systemHealth.agents.pending}
-              completed={snapshot.systemHealth.agents.completed}
+              active={safeAgents?.active ?? 0}
+              pending={safeAgents?.pending ?? 0}
+              completed={safeAgents?.completed ?? 0}
             />
           </section>
 
-          <ProcessStream logs={logs} />
+          <ProcessStream logs={logs?.length ? logs : safeRecentLogs} />
         </>
       )}
 

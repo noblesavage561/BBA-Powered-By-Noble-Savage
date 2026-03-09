@@ -1,6 +1,7 @@
 const { ApolloServer, gql } = require("apollo-server");
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://backend:8000";
+const CORS_ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS || "*";
 
 const typeDefs = gql`
   type Health {
@@ -96,7 +97,11 @@ const resolvers = {
   },
 };
 
-const server = new ApolloServer({ typeDefs, resolvers });
+const corsOrigins = CORS_ALLOWED_ORIGINS === "*"
+  ? true
+  : CORS_ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean);
+
+const server = new ApolloServer({ typeDefs, resolvers, cors: { origin: corsOrigins } });
 
 server.listen({ port: 4000, host: "0.0.0.0" }).then(({ url }) => {
   console.log(`GraphQL ready at ${url}`);

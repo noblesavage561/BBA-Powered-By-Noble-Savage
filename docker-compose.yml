@@ -46,6 +46,7 @@ services:
       DB_NAME: bba_os
       REDIS_URL: redis://redis:6379
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      CORS_ALLOWED_ORIGINS: "*"
     ports:
       - "8000:8000"
     depends_on:
@@ -62,6 +63,7 @@ services:
     restart: unless-stopped
     environment:
       BACKEND_URL: http://backend:8000
+      CORS_ALLOWED_ORIGINS: "*"
     ports:
       - "4000:4000"
     depends_on:

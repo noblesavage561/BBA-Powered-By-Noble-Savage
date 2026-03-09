@@ -582,6 +582,42 @@ p {
   justify-self: end;
 }
 
+.error-boundary-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(73, 138, 255, 0.22), transparent 34%),
+    radial-gradient(circle at 80% 80%, rgba(112, 77, 255, 0.2), transparent 38%),
+    linear-gradient(160deg, #0b1120, #111b32);
+}
+
+.error-boundary-card {
+  width: min(760px, 100%);
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 24px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+  backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: 0 18px 46px rgba(3, 8, 24, 0.34);
+}
+
+.error-boundary-card h1 {
+  margin-top: 6px;
+}
+
+.error-boundary-card p {
+  color: #d0def0;
+}
+
+.error-boundary-card code {
+  display: block;
+  margin-top: 12px;
+  color: #f7a8bf;
+  word-break: break-word;
+}
+
 @media (max-width: 1180px) {
   .executive-brief {
     grid-template-columns: 1fr;

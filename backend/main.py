@@ -68,7 +68,7 @@ def parse_csv_env(name: str, default: str) -> List[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-allowed_origins = parse_csv_env("ALLOWED_ORIGINS", "*")
+allowed_origins = parse_csv_env("CORS_ALLOWED_ORIGINS", os.getenv("ALLOWED_ORIGINS", "*"))
 allowed_hosts = parse_csv_env("ALLOWED_HOSTS", "*")
 cors_allow_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
 

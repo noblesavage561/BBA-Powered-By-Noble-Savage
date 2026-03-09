@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getApiConfig } from "../config/api";
 
 function getSystemWsUrl() {
-  if (typeof window === "undefined") {
-    return "ws://127.0.0.1/ws/system";
-  }
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}/ws/system`;
+  return getApiConfig().systemHealthWsUrl;
 }
 
 export function useSystemStream({ onHealthUpdate, onLog } = {}) {
