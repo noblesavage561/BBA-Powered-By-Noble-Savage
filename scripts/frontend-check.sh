@@ -10,8 +10,8 @@ done
 
 html="$(curl -sS http://127.0.0.1:3000/)"
 
-if [[ "$html" != *"BBA Core Intelligence Hub"* ]]; then
-  echo "Frontend check failed: expected marker text not found"
+if [[ "$html" != *"<title>BBA Core Intelligence Hub</title>"* ]]; then
+  echo "Frontend check failed: expected title marker not found"
   exit 1
 fi
 

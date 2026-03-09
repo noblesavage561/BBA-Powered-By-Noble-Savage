@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Database, ShieldCheck, Zap, Server, Activity, RefreshCw, MoonStar, SunMedium } from "lucide-react";
-import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
+import { MoonStar, RefreshCw, ServerCog, SunMedium } from "lucide-react";
+import { GraphQLGatewayTile } from "./components/monitoring/GraphQLGatewayTile";
+import { DatabasePoolTile } from "./components/monitoring/DatabasePoolTile";
+import { RedisCacheTile } from "./components/monitoring/RedisCacheTile";
+import { ProcessStream } from "./components/monitoring/ProcessStream";
+import { AgentActivityTile } from "./components/monitoring/AgentActivityTile";
+import { useSystemStream } from "./hooks/useSystemStream";
 
 const GRAPHQL_URL = "http://127.0.0.1:4000/";
 
@@ -18,7 +23,7 @@ const darkTheme = {
 
 const lightTheme = {
   "--bg": "#f4f8ff",
-  "--bg-alt": "#dde8ff",
+  "--bg-alt": "#dfe8ff",
   "--text": "#10233f",
   "--muted": "#4f647d",
   "--accent": "#0f9d88",
@@ -27,146 +32,152 @@ const lightTheme = {
   "--glass-strong": "rgba(255,255,255,0.85)",
 };
 
-function makeUptimePoint(value, index) {
-  return { second: index, uptime: value };
-}
-
-function getNowStamp() {
-  return new Date().toLocaleTimeString();
-}
+const SYSTEM_HEALTH_QUERY = `
+  query GetSystemHealth {
+    health {
+      status
+      db_connected
+      redis_connected
+      timestamp
+    }
+    systemHealth {
+      graphql {
+        latencyMs
+        requestsPerSecond
+        errorRate
+        historicalLatency
+      }
+      database {
+        activeConnections
+        maxConnections
+        queryRate
+        avgQueryTime
+      }
+      redis {
+        hitRate
+        memoryUsedMb
+        memoryTotalMb
+        keysCount
+        connectedClients
+      }
+      agents {
+        active
+        pending
+        completed
+      }
+      recent_logs {
+        timestamp
+        message
+        type
+        category
+      }
+    }
+  }
+`;
 
 export function App() {
   const [isDark, setIsDark] = useState(true);
-  const [health, setHealth] = useState(null);
-  const [latencyMs, setLatencyMs] = useState(null);
-  const [isRefreshing, setIsRefreshing] = useState(true);
   const [error, setError] = useState("");
-  const [liveLogs, setLiveLogs] = useState([
-    `[${getNowStamp()}] Intelligence Hub initialized.`,
-    `[${getNowStamp()}] Awaiting telemetry from GraphQL gateway.`,
-  ]);
-  const [uptimeSeries, setUptimeSeries] = useState(Array.from({ length: 60 }, (_, i) => makeUptimePoint(99.7 + ((i % 6) * 0.03), i)));
-  const [recentProcesses, setRecentProcesses] = useState([
-    `[${getNowStamp()}] Smoke test execution completed.`,
-    `[${getNowStamp()}] Cache synchronization completed.`,
-    `[${getNowStamp()}] Backend process index updated.`,
-  ]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [snapshot, setSnapshot] = useState(null);
+  const [logs, setLogs] = useState([]);
+
+  useSystemStream({
+    onHealthUpdate: (payload) => {
+      setSnapshot((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        return { ...prev, systemHealth: payload };
+      });
+      if (payload?.recent_logs?.length) {
+        setLogs(payload.recent_logs);
+      }
+    },
+    onLog: (log) => {
+      setLogs((prev) => [log, ...prev].slice(0, 12));
+    },
+  });
 
   const themeVars = isDark ? darkTheme : lightTheme;
 
-  const globalHealthScore = useMemo(() => {
-    if (!health) {
+  const pulseScore = useMemo(() => {
+    if (!snapshot?.health) {
       return 99.9;
     }
-    const base = health.status === "healthy" ? 99.9 : 87.2;
-    const dbPenalty = health.db_connected ? 0 : 7.5;
-    const redisPenalty = health.redis_connected ? 0 : 6.3;
-    return Math.max(50, +(base - dbPenalty - redisPenalty).toFixed(1));
-  }, [health]);
-
-  const cacheHitRate = useMemo(() => {
-    if (!health) {
-      return 98.4;
+    const health = snapshot.health;
+    let score = health.status === "healthy" ? 99.9 : 86.2;
+    if (!health.db_connected) {
+      score -= 7;
     }
-    return health.redis_connected ? 99.2 : 76.1;
-  }, [health]);
-
-  const dbConnections = useMemo(() => {
-    if (!health) {
-      return 12;
+    if (!health.redis_connected) {
+      score -= 6;
     }
-    return health.db_connected ? 14 : 0;
-  }, [health]);
+    return Math.max(50, +score.toFixed(1));
+  }, [snapshot]);
 
-  async function fetchHealth() {
-    const start = performance.now();
+  const circleOffset = 502 - (pulseScore / 100) * 502;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    Object.entries(themeVars).forEach(([key, value]) => root.style.setProperty(key, value));
+  }, [themeVars]);
+
+  async function fetchSnapshot() {
     setIsRefreshing(true);
     setError("");
-
     try {
       const res = await fetch(GRAPHQL_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: "query { health { status db_connected redis_connected timestamp } }" }),
+        body: JSON.stringify({ query: SYSTEM_HEALTH_QUERY }),
       });
-
       if (!res.ok) {
         throw new Error(`GraphQL HTTP ${res.status}`);
       }
-
-      const payload = await res.json();
-      if (payload.errors?.length) {
-        throw new Error(payload.errors[0].message || "GraphQL query failed");
+      const json = await res.json();
+      if (json.errors?.length) {
+        throw new Error(json.errors[0].message || "Query failed");
       }
-
-      const elapsed = performance.now() - start;
-      setLatencyMs(Math.round(elapsed));
-      setHealth(payload.data.health);
-
-      setRecentProcesses((prev) => {
-        const next = [`[${getNowStamp()}] Gateway sync completed in ${Math.round(elapsed)}ms.`, ...prev];
-        return next.slice(0, 3);
-      });
-
-      setLiveLogs((prev) => {
-        const next = [
-          `[${getNowStamp()}] Optimized database query executed.`,
-          `[${getNowStamp()}] Redis heartbeat acknowledged.`,
-          ...prev,
-        ];
-        return next.slice(0, 8);
-      });
-
-      setUptimeSeries((prev) => {
-        const nextValue = payload.data.health.status === "healthy" ? 99.6 + Math.random() * 0.4 : 95 + Math.random() * 3;
-        const shifted = [...prev.slice(1), makeUptimePoint(+nextValue.toFixed(2), prev.length)];
-        return shifted.map((p, i) => ({ second: i, uptime: p.uptime }));
-      });
+      setSnapshot(json.data);
+      if (json.data.systemHealth.recent_logs?.length) {
+        setLogs(json.data.systemHealth.recent_logs);
+      }
     } catch (e) {
       setError(String(e));
-      setLiveLogs((prev) => [`[${getNowStamp()}] Warning: service maintenance mode detected.`, ...prev].slice(0, 8));
     } finally {
       setIsRefreshing(false);
     }
   }
 
   useEffect(() => {
-    fetchHealth();
-    const id = setInterval(fetchHealth, 7000);
+    fetchSnapshot();
+    const id = setInterval(fetchSnapshot, 5000);
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    Object.entries(themeVars).forEach(([key, value]) => {
-      root.style.setProperty(key, value);
-    });
-  }, [themeVars]);
-
   const reconnectView = (
-    <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rescue">
+    <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rescue cmd-glass">
       <div className="rescue-graphic">(  x_x )</div>
       <h2>Service Maintenance in Progress</h2>
-      <p>Gateway telemetry is temporarily unavailable. We are retrying orchestration links.</p>
-      <button className="reconnect" onClick={fetchHealth}>
+      <p>Telemetry stream is temporarily unavailable. Retry connection to continue live observability.</p>
+      <button className="reconnect" onClick={fetchSnapshot}>
         <RefreshCw size={16} /> Reconnect
       </button>
       <code>{error}</code>
     </motion.section>
   );
 
-  const circleOffset = 502 - (globalHealthScore / 100) * 502;
-
   return (
     <div className="hub-shell">
-      <motion.header initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="hero nested-glass">
+      <motion.header initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="hero cmd-glass">
         <div className="hero-top">
           <div className="brand-wrap">
             <div className="logo-glow" aria-hidden="true" />
             <div className="logo">BBA</div>
             <div>
               <h1>BBA Core Intelligence Hub</h1>
-              <p>Enterprise telemetry, orchestrated in real time.</p>
+              <p>Command Center for deep system observability.</p>
             </div>
           </div>
           <button className="theme-toggle" onClick={() => setIsDark((v) => !v)}>
@@ -175,13 +186,13 @@ export function App() {
         </div>
 
         <div className="hero-bottom">
-          <div className="pulse-wrap nested-glass-inner">
+          <div className="pulse-wrap cmd-glass-inner">
             <svg width="190" height="190" viewBox="0 0 200 200" className="pulse-svg">
               <circle cx="100" cy="100" r="80" className="track" />
               <circle cx="100" cy="100" r="80" className="progress" style={{ strokeDashoffset: circleOffset }} />
             </svg>
             <div className="pulse-copy">
-              <div className="pulse-value">{globalHealthScore}%</div>
+              <div className="pulse-value">{pulseScore}%</div>
               <div className="pulse-label">System Health</div>
             </div>
           </div>
@@ -193,74 +204,44 @@ export function App() {
         </div>
       </motion.header>
 
-      {error ? (
+      {error || !snapshot ? (
         reconnectView
       ) : (
         <>
-          <section className="matrix">
-            <motion.article whileHover={{ y: -3 }} className="tile large nested-glass">
-              <header>
-                <Zap size={18} />
-                <h3>Gateway Performance</h3>
-              </header>
-              <div className="metric">{latencyMs ?? 0}ms</div>
-              <p>GraphQL response latency across orchestration path.</p>
-              <div className="sparkline-wrap">
-                <ResponsiveContainer width="100%" height={90}>
-                  <LineChart data={uptimeSeries}>
-                    <Tooltip formatter={(value) => [`${value}%`, "Uptime"]} labelFormatter={(v) => `Second ${v}`} />
-                    <Line type="monotone" dataKey="uptime" stroke="var(--accent)" strokeWidth={2.2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.article>
-
-            <motion.article whileHover={{ y: -3 }} className="tile nested-glass">
-              <header>
-                <Database size={18} />
-                <h3>Database and Storage</h3>
-              </header>
-              <div className="stat-row">
-                <span>Connections</span>
-                <strong>{dbConnections}</strong>
-              </div>
-              <div className="stat-row">
-                <span>Redis Cache Hit</span>
-                <strong>{cacheHitRate}%</strong>
-              </div>
-              <div className="status-row">
-                <span className={health?.db_connected ? "ok" : "alert"}>DB {health?.db_connected ? "Online" : "Offline"}</span>
-                <span className={health?.redis_connected ? "ok" : "alert"}>Redis {health?.redis_connected ? "Online" : "Offline"}</span>
-              </div>
-            </motion.article>
-
-            <motion.article whileHover={{ y: -3 }} className="tile nested-glass">
-              <header>
-                <Server size={18} />
-                <h3>Active Backend Processes</h3>
-              </header>
-              <ul className="process-list">
-                {recentProcesses.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </motion.article>
+          <section className="matrix cmd-matrix">
+            <GraphQLGatewayTile
+              latencyMs={snapshot.systemHealth.graphql.latencyMs}
+              requestsPerSecond={snapshot.systemHealth.graphql.requestsPerSecond}
+              errorRate={snapshot.systemHealth.graphql.errorRate}
+              historicalData={snapshot.systemHealth.graphql.historicalLatency}
+            />
+            <DatabasePoolTile
+              activeConnections={snapshot.systemHealth.database.activeConnections}
+              maxConnections={snapshot.systemHealth.database.maxConnections}
+              queryRate={snapshot.systemHealth.database.queryRate}
+              avgQueryTime={snapshot.systemHealth.database.avgQueryTime}
+            />
+            <RedisCacheTile
+              hitRate={snapshot.systemHealth.redis.hitRate}
+              memoryUsedMb={snapshot.systemHealth.redis.memoryUsedMb}
+              memoryTotalMb={snapshot.systemHealth.redis.memoryTotalMb}
+              keysCount={snapshot.systemHealth.redis.keysCount}
+              connectedClients={snapshot.systemHealth.redis.connectedClients}
+            />
+            <AgentActivityTile
+              active={snapshot.systemHealth.agents.active}
+              pending={snapshot.systemHealth.agents.pending}
+              completed={snapshot.systemHealth.agents.completed}
+            />
           </section>
 
-          <section className="logs nested-glass">
-            <header>
-              <Activity size={18} />
-              <h3>Live Logs</h3>
-              <ShieldCheck size={16} className="shield" />
-            </header>
-            <div className="terminal">
-              {liveLogs.map((line) => (
-                <div key={line}>{line}</div>
-              ))}
-            </div>
-          </section>
+          <ProcessStream logs={logs} />
         </>
       )}
+
+      <footer className="micro-label footer-note">
+        <ServerCog size={13} /> Updated {new Date().toLocaleTimeString()}
+      </footer>
     </div>
   );
 }

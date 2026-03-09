@@ -10,6 +10,49 @@ const typeDefs = gql`
     redis_connected: Boolean!
   }
 
+  type GraphQLHealth {
+    latencyMs: Int!
+    requestsPerSecond: Float!
+    errorRate: Float!
+    historicalLatency: [Int!]!
+  }
+
+  type DatabaseHealth {
+    activeConnections: Int!
+    maxConnections: Int!
+    queryRate: Int!
+    avgQueryTime: Float!
+  }
+
+  type RedisHealth {
+    hitRate: Float!
+    memoryUsedMb: Float!
+    memoryTotalMb: Int!
+    keysCount: Int!
+    connectedClients: Int!
+  }
+
+  type AgentHealth {
+    active: Int!
+    pending: Int!
+    completed: Int!
+  }
+
+  type ProcessLog {
+    timestamp: String!
+    message: String!
+    type: String!
+    category: String!
+  }
+
+  type SystemHealth {
+    graphql: GraphQLHealth!
+    database: DatabaseHealth!
+    redis: RedisHealth!
+    agents: AgentHealth!
+    recent_logs: [ProcessLog!]!
+  }
+
   type FundingResponse {
     matches: [String!]!
   }
@@ -17,6 +60,7 @@ const typeDefs = gql`
   type Query {
     health: Health!
     fundingMatches(clientId: String!): FundingResponse!
+    systemHealth: SystemHealth!
   }
 `;
 
@@ -41,6 +85,13 @@ const resolvers = {
         return `${name} (${score}%)`;
       });
       return { matches: formatted };
+    },
+    systemHealth: async () => {
+      const res = await fetch(`${BACKEND_URL}/api/v1/system/health`);
+      if (!res.ok) {
+        throw new Error(`System health call failed with status ${res.status}`);
+      }
+      return res.json();
     },
   },
 };
