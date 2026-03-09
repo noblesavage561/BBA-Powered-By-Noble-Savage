@@ -27,7 +27,7 @@ export function AgentActivityTile({ active, pending, completed }) {
   ];
 
   return (
-    <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="tile cmd-glass">
+    <motion.article initial={false} animate={{ opacity: 1, y: 0 }} className="tile cmd-glass">
       <header className="tile-head">
         <div className="tile-title-wrap">
           <Bot size={18} />

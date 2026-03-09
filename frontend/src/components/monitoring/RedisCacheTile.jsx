@@ -18,7 +18,7 @@ export function RedisCacheTile({ hitRate, memoryUsedMb, memoryTotalMb, keysCount
   const memoryPercentage = (memoryUsedMb / Math.max(memoryTotalMb, 1)) * 100;
 
   return (
-    <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="tile cmd-glass">
+    <motion.article initial={false} animate={{ opacity: 1, y: 0 }} className="tile cmd-glass">
       <header className="tile-head">
         <div className="tile-title-wrap">
           <Bolt size={18} />

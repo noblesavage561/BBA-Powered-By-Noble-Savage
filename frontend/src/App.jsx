@@ -187,7 +187,7 @@ export function App() {
   }, []);
 
   const reconnectView = (
-    <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rescue cmd-glass">
+    <motion.section initial={false} animate={{ opacity: 1 }} className="rescue cmd-glass">
       <div className="rescue-graphic">(  x_x )</div>
       <h2>Service Maintenance in Progress</h2>
       <p>Telemetry stream is temporarily unavailable. Retry connection to continue live observability.</p>
@@ -200,7 +200,7 @@ export function App() {
 
   return (
     <div className="hub-shell">
-      <motion.header initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="hero cmd-glass">
+      <motion.header initial={false} animate={{ opacity: 1, y: 0 }} className="hero cmd-glass">
         <div className="hero-top">
           <div className="brand-wrap">
             <div className="logo-glow" aria-hidden="true" />

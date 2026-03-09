@@ -62,7 +62,7 @@ export function GraphQLGatewayTile({ latencyMs, requestsPerSecond, errorRate, hi
   }, [latencyMs]);
 
   return (
-    <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="tile tile-large cmd-glass">
+    <motion.article initial={false} animate={{ opacity: 1, y: 0 }} className="tile tile-large cmd-glass">
       <header className="tile-head">
         <div className="tile-title-wrap">
           <Server size={18} />
