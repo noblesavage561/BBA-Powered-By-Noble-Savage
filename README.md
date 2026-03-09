@@ -22,6 +22,9 @@ curl -X POST http://127.0.0.1:4000/ \
   -d '{"query":"query { health { status db_connected redis_connected } }"}'
 
 ./scripts/smoke-test.sh
+
+# Frontend review page
+curl -I http://127.0.0.1:3000/
 ```
 
 ### Stop Services

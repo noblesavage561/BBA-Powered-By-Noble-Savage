@@ -68,6 +68,18 @@ services:
       backend:
         condition: service_started
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bba_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      graphql:
+        condition: service_started
+
 volumes:
   postgres_data:
   redis_data:
