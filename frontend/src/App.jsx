@@ -116,6 +116,36 @@ export function App() {
     return Math.max(50, +score.toFixed(1));
   }, [snapshot]);
 
+  const executiveSummary = useMemo(() => {
+    if (!snapshot?.systemHealth) {
+      return {
+        grade: "Pending",
+        risk: "Assessing",
+        recommendation: "Waiting for telemetry snapshot.",
+      };
+    }
+
+    const gql = snapshot.systemHealth.graphql;
+    const db = snapshot.systemHealth.database;
+    const redis = snapshot.systemHealth.redis;
+
+    let grade = "Excellent";
+    let risk = "Low";
+    let recommendation = "Operations are stable. Continue standard monitoring cadence.";
+
+    if (gql.errorRate >= 1 || gql.latencyMs >= 300 || redis.hitRate < 85 || db.avgQueryTime >= 150) {
+      grade = "Needs Attention";
+      risk = "High";
+      recommendation = "Activate incident protocol and assign engineering owner for immediate remediation.";
+    } else if (gql.errorRate >= 0.25 || gql.latencyMs >= 180 || db.avgQueryTime >= 70) {
+      grade = "Watch";
+      risk = "Medium";
+      recommendation = "Track for the next 30 minutes and prepare scale-up if trend continues.";
+    }
+
+    return { grade, risk, recommendation };
+  }, [snapshot]);
+
   const circleOffset = 502 - (pulseScore / 100) * 502;
 
   useEffect(() => {
@@ -177,11 +207,11 @@ export function App() {
             <div className="logo">BBA</div>
             <div>
               <h1>BBA Core Intelligence Hub</h1>
-              <p>Command Center for deep system observability.</p>
+              <p>Executive command center for platform health, risk, and readiness.</p>
             </div>
           </div>
           <button className="theme-toggle" onClick={() => setIsDark((v) => !v)}>
-            {isDark ? <SunMedium size={16} /> : <MoonStar size={16} />} {isDark ? "Cloud" : "Midnight"}
+            {isDark ? <SunMedium size={16} /> : <MoonStar size={16} />} {isDark ? "Light" : "Dark"}
           </button>
         </div>
 
@@ -208,6 +238,28 @@ export function App() {
         reconnectView
       ) : (
         <>
+          <section className="executive-brief cmd-glass">
+            <div>
+              <div className="micro-label">Executive Summary</div>
+              <h3>Management Review Snapshot</h3>
+              <p>{executiveSummary.recommendation}</p>
+            </div>
+            <div className="brief-badges">
+              <div className="brief-badge">
+                <span className="micro-label">Readiness</span>
+                <strong>{executiveSummary.grade}</strong>
+              </div>
+              <div className="brief-badge">
+                <span className="micro-label">Risk Level</span>
+                <strong>{executiveSummary.risk}</strong>
+              </div>
+              <div className="brief-badge">
+                <span className="micro-label">Health Score</span>
+                <strong>{pulseScore.toFixed(1)}%</strong>
+              </div>
+            </div>
+          </section>
+
           <section className="matrix cmd-matrix">
             <GraphQLGatewayTile
               latencyMs={snapshot.systemHealth.graphql.latencyMs}
