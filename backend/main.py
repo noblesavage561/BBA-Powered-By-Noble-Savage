@@ -10,6 +10,7 @@ import redis.asyncio as redis
 from fastapi import BackgroundTasks, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from agents.compliance_agent import ComplianceAgent
 from agents.executive_strategist import ExecutiveStrategistAgent
@@ -61,13 +62,29 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="BBA Services OS - AI Engine", version="1.0.0", lifespan=lifespan)
 
+
+def parse_csv_env(name: str, default: str) -> List[str]:
+    raw = os.getenv(name, default)
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+allowed_origins = parse_csv_env("ALLOWED_ORIGINS", "*")
+allowed_hosts = parse_csv_env("ALLOWED_HOSTS", "*")
+cors_allow_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
+
+# Browsers reject wildcard origins when credentials are enabled.
+if "*" in allowed_origins and cors_allow_credentials:
+    cors_allow_credentials = False
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
 
 class DocumentAnalysisRequest(BaseModel):
@@ -282,11 +299,13 @@ async def get_funding_matches(client_id: str):
 
 @app.get("/api/v1/health")
 async def health_check():
+    db_connected = db_pool is not None
+    redis_connected = redis_client is not None
     return {
-        "status": "healthy",
+        "status": "healthy" if db_connected and redis_connected else "degraded",
         "timestamp": datetime.utcnow().isoformat(),
-        "db_connected": db_pool is not None,
-        "redis_connected": redis_client is not None,
+        "db_connected": db_connected,
+        "redis_connected": redis_connected,
     }
 
 

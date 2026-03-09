@@ -32,3 +32,32 @@ curl -I http://127.0.0.1:3000/
 ```bash
 docker compose down
 ```
+
+## Production Deployment Baseline
+
+### 1) Create a production env file
+
+```bash
+cp .env.prod.example .env.prod
+```
+
+Populate all required values in `.env.prod` before deployment.
+
+### 2) Start production profile
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+### 3) Verify production health
+
+```bash
+curl http://127.0.0.1/api/v1/health
+```
+
+## Production Hardening Decisions
+
+- The backend now enforces host allow-listing via `ALLOWED_HOSTS`.
+- CORS is environment-driven via `ALLOWED_ORIGINS`, with credentials disabled by default.
+- Database and Redis host ports are not exposed in the production compose override.
+- Backend and GraphQL are internal-only in production; frontend is exposed on port 80.
