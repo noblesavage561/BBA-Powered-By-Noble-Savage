@@ -8,7 +8,7 @@ import { ProcessStream } from "./components/monitoring/ProcessStream";
 import { AgentActivityTile } from "./components/monitoring/AgentActivityTile";
 import { useSystemStream } from "./hooks/useSystemStream";
 
-const GRAPHQL_URL = "http://127.0.0.1:4000/";
+const GRAPHQL_URL = "/graphql";
 
 const darkTheme = {
   "--bg": "#0A192F",

@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const DEFAULT_WS_URL = "ws://127.0.0.1:8000/ws/system";
+function getSystemWsUrl() {
+  if (typeof window === "undefined") {
+    return "ws://127.0.0.1/ws/system";
+  }
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}/ws/system`;
+}
 
 export function useSystemStream({ onHealthUpdate, onLog } = {}) {
   const [isConnected, setIsConnected] = useState(false);
@@ -8,7 +14,7 @@ export function useSystemStream({ onHealthUpdate, onLog } = {}) {
   const reconnectRef = useRef(null);
 
   const connect = useCallback(() => {
-    const ws = new WebSocket(DEFAULT_WS_URL);
+    const ws = new WebSocket(getSystemWsUrl());
     wsRef.current = ws;
 
     ws.onopen = () => {
