@@ -10,7 +10,7 @@ done
 
 html="$(curl -sS http://127.0.0.1:3000/)"
 
-if [[ "$html" != *"BBA Services OS Frontend Health"* ]]; then
+if [[ "$html" != *"BBA Core Intelligence Hub"* ]]; then
   echo "Frontend check failed: expected marker text not found"
   exit 1
 fi
