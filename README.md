@@ -1,73 +1,72 @@
 # BBA-Powered-By-Noble-Savage
-Business Intelligence Suite 
+
+Business Intelligence Suite — AI-powered bookkeeping, compliance, and funding readiness platform.
+
+## Architecture
+
+| Service   | Port (dev) | Description                                |
+|-----------|------------|--------------------------------------------|
+| Frontend  | 3000       | React SPA served by Nginx (proxies API/WS) |
+| Backend   | 8000       | FastAPI – REST + WebSocket engine          |
+| GraphQL   | 4000       | Apollo Server gateway                      |
+| Postgres  | 5432       | Primary database with RLS                  |
+| Redis     | 6379       | Cache / session layer                      |
 
 ## Local Development
 
-### Frontend API Override
-
-The frontend API base is dynamically resolved for Codespaces previews. To override manually, provide `NEXT_PUBLIC_API_URL` at build/runtime.
-
-If your browser still shows stale content, use the reset URL once:
-
-`https://<codespace>-3000.app.github.dev/?reset=1`
-
-This clears browser storage/cache entries and reloads with a fresh timestamp.
-
-### Quick Start (Recommended)
+### Quick Start
 
 ```bash
 ./scripts/dev-start.sh
 ```
 
-This command builds and starts all services, then runs smoke and frontend checks.
+Builds and starts all services, runs smoke tests and frontend checks.
 
-To stop everything:
+**Endpoints:**
+- Dashboard: http://127.0.0.1:3000
+- Backend health: http://127.0.0.1:8000/api/v1/health
+- GraphQL playground: http://127.0.0.1:4000
+
+### Stop Services
 
 ```bash
 ./scripts/dev-stop.sh
 ```
 
-### Run With Docker Compose
+### Codespaces
 
-```bash
-docker compose up --build -d
+The frontend auto-detects the current origin, so it works in GitHub Codespaces without extra configuration. If the browser shows stale content:
+
+```
+https://<codespace>-3000.app.github.dev/?reset=1
 ```
 
 ### Verify Backend
 
 ```bash
 curl http://127.0.0.1:8000/api/v1/health
-curl -X POST http://127.0.0.1:8000/api/v1/analyze-document \
-	-H "Content-Type: application/json" \
-	-d '{"document_id":"doc-1","client_id":"client-1","tenant_id":"tenant-1"}'
+
+curl -X POST http://127.0.0.1:8000/api/v1/categorize-transaction \
+  -H "Content-Type: application/json" \
+  -d '{"transaction_id":"tx-1","description":"Monthly office rent","amount":2500.00}'
 
 curl -X POST http://127.0.0.1:4000/ \
   -H "Content-Type: application/json" \
   -d '{"query":"query { health { status db_connected redis_connected } }"}'
 
 ./scripts/smoke-test.sh
-
-# Frontend review page
-curl -I http://127.0.0.1:3000/
 ```
 
-### Stop Services
-
-```bash
-docker compose down
-```
-
-## Production Deployment Baseline
+## Production Deployment
 
 ### 1) Create a production env file
 
 ```bash
 cp .env.prod.example .env.prod
+# Edit .env.prod with real secrets
 ```
 
-Populate all required values in `.env.prod` before deployment.
-
-### 2) Start production profile
+### 2) Start production stack
 
 ```bash
 docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
@@ -79,9 +78,13 @@ docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod
 curl http://127.0.0.1/api/v1/health
 ```
 
-## Production Hardening Decisions
+## Production Hardening
 
-- The backend now enforces host allow-listing via `ALLOWED_HOSTS`.
-- CORS is environment-driven via `ALLOWED_ORIGINS`, with credentials disabled by default.
-- Database and Redis host ports are not exposed in the production compose override.
-- Backend and GraphQL are internal-only in production; frontend is exposed on port 80.
+- **Host allow-listing:** Backend enforces `ALLOWED_HOSTS` via TrustedHostMiddleware.
+- **CORS lockdown:** `ALLOWED_ORIGINS` controls browser cross-origin access; credentials disabled by default.
+- **Internal-only services:** Database, Redis, Backend, and GraphQL ports are unexposed in production; only the Nginx frontend (port 80) is public.
+- **Non-root containers:** Backend and GraphQL run as unprivileged users inside Docker.
+- **Healthchecks:** Every service has Docker-level healthchecks with dependency ordering.
+- **Row-Level Security:** Postgres tables enforce tenant isolation via RLS policies.
+- **Security headers:** Nginx sets X-Content-Type-Options, X-Frame-Options, Referrer-Policy, X-XSS-Protection, and Permissions-Policy.
+- **Graceful degradation:** All agents fall back to local logic when OpenAI is unavailable.
