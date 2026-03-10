@@ -114,3 +114,23 @@ Optional env vars:
 - `PRIMARY_MODEL`, `SECONDARY_MODEL`, `THIRD_MODEL`, `TEXT_ONLY_MODEL`
 - `ENVIRONMENT` - set to `production` for production runtime behavior
 - `REQUIRE_AI_KEY` - `true` to require `AI_API_KEY` at startup
+
+### Secure Local Key Handling
+
+Best practice for local development is to keep `.env` keyless and inject secrets at runtime:
+
+```bash
+chmod +x ./scripts/start-secure.sh
+./scripts/start-secure.sh
+```
+
+This script prompts for `AI_API_KEY` (or uses an already exported one) and recreates services with the key in container runtime env only.
+
+Verify live AI linkage in one command:
+
+```bash
+chmod +x ./scripts/verify-ai-link.sh
+./scripts/verify-ai-link.sh
+```
+
+Expected success output includes: `PASS: AI linkage verified. source=ai`.
