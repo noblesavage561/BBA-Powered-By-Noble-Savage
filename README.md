@@ -78,6 +78,14 @@ docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod
 curl http://127.0.0.1/api/v1/health
 ```
 
+### 4) Apply incremental DB migrations (no volume reset)
+
+```bash
+./scripts/db-migrate.sh
+```
+
+Use this when your stack already has existing volume data and you need new portal tables without reinitializing Postgres.
+
 ## Production Hardening
 
 - **Host allow-listing:** Backend enforces `ALLOWED_HOSTS` via TrustedHostMiddleware.
@@ -88,3 +96,21 @@ curl http://127.0.0.1/api/v1/health
 - **Row-Level Security:** Postgres tables enforce tenant isolation via RLS policies.
 - **Security headers:** Nginx sets X-Content-Type-Options, X-Frame-Options, Referrer-Policy, X-XSS-Protection, and Permissions-Policy.
 - **Graceful degradation:** All agents fall back to local logic when OpenAI is unavailable.
+
+## Upload Intelligence AI
+
+- Endpoint: `POST /api/v1/analyze-upload`
+- Uses backend proxy logic (never exposes API keys in browser).
+- Uses external provider settings (`AI_BASE_URL` + `AI_API_KEY`) and a model stack fallback loop.
+- Default order: `PRIMARY_MODEL` -> `SECONDARY_MODEL` -> `THIRD_MODEL`.
+- Text-only path prefers `TEXT_ONLY_MODEL` first for speed.
+- In production, `REQUIRE_AI_KEY=true` enforces fail-fast startup if no AI key is configured.
+- If all provider calls fail, API returns a clean `System Overloaded` response payload and a fallback object.
+
+Optional env vars:
+
+- `AI_BASE_URL` - e.g. `https://openrouter.ai/api/v1` or `https://api.x.ai/v1`
+- `AI_API_KEY` - provider API key
+- `PRIMARY_MODEL`, `SECONDARY_MODEL`, `THIRD_MODEL`, `TEXT_ONLY_MODEL`
+- `ENVIRONMENT` - set to `production` for production runtime behavior
+- `REQUIRE_AI_KEY` - `true` to require `AI_API_KEY` at startup

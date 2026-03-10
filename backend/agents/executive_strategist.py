@@ -8,7 +8,7 @@ from openai import OpenAI
 
 class ExecutiveStrategistAgent:
     def __init__(self):
-        self.has_openai_key = bool(os.getenv("OPENAI_API_KEY"))
+        self.has_openai_key = bool(os.getenv("AI_API_KEY") or os.getenv("OPENAI_API_KEY"))
         self.system_prompt = """
 You are Noble Savage AI, the central intelligence of BBA Services OS.
 

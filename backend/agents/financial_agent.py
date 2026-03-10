@@ -13,7 +13,7 @@ class FinancialAgent:
 
     def __init__(self, db_pool: Any):
         self.db_pool = db_pool
-        self.has_openai_key = bool(os.getenv("OPENAI_API_KEY"))
+        self.has_openai_key = bool(os.getenv("AI_API_KEY") or os.getenv("OPENAI_API_KEY"))
         self.llm = openai.OpenAI() if self.has_openai_key else None
         self.categories = [
             "Advertising",

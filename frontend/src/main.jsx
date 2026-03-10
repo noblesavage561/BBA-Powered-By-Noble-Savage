@@ -1,7 +1,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { UploadStoreProvider } from "./store/UploadStore";
 import "./styles.css";
 
 async function runResetRefreshIfRequested() {
@@ -50,7 +52,11 @@ runResetRefreshIfRequested();
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <UploadStoreProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </UploadStoreProvider>
     </ErrorBoundary>
   </StrictMode>
 );

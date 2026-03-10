@@ -1,5 +1,6 @@
 import os
 import random
+import json
 from asyncio import sleep
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -17,16 +18,21 @@ from agents.executive_strategist import ExecutiveStrategistAgent
 from agents.financial_agent import FinancialAgent
 from agents.funding_agent import FundingAgent
 from agents.intake_agent import IntakeAgent
+from model_manager import ModelManager
 
 # Database/Redis clients are optional for local execution.
 db_pool: Optional[asyncpg.Pool] = None
 redis_client: Optional[redis.Redis] = None
 last_30_latencies: List[int] = []
+portal_state_fallback: Dict[str, Dict[str, Any]] = {}
+portal_documents_fallback: Dict[str, List[Dict[str, Any]]] = {}
+portal_threads_fallback: Dict[str, List[Dict[str, Any]]] = {}
+model_manager: Optional[ModelManager] = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db_pool, redis_client
+    global db_pool, redis_client, model_manager
 
     try:
         db_pool = await asyncpg.create_pool(
@@ -52,12 +58,16 @@ async def lifespan(app: FastAPI):
     except Exception:
         redis_client = None
 
+    model_manager = ModelManager()
+
     yield
 
     if db_pool:
         await db_pool.close()
     if redis_client:
         await redis_client.close()
+    if model_manager:
+        await model_manager.close()
 
 
 app = FastAPI(title="BBA Services OS - AI Engine", version="1.0.0", lifespan=lifespan)
@@ -93,6 +103,13 @@ class DocumentAnalysisRequest(BaseModel):
     tenant_id: str
 
 
+class UploadVisionAnalysisRequest(BaseModel):
+    file_name: str
+    base64_image: Optional[str] = None
+    mime_type: Optional[str] = None
+    text_input: Optional[str] = None
+
+
 class TransactionCategorizationRequest(BaseModel):
     transaction_id: str
     description: str
@@ -103,6 +120,31 @@ class TransactionCategorizationRequest(BaseModel):
 class TreatmentPlanRequest(BaseModel):
     client_id: str
     tenant_id: str
+
+
+class PortalStateRequest(BaseModel):
+    tenant_id: str
+    payload: Dict[str, Any]
+
+
+class PortalDocumentRequest(BaseModel):
+    tenant_id: str
+    case_id: str
+    document: Dict[str, Any]
+
+
+class PortalThreadMessageRequest(BaseModel):
+    tenant_id: str
+    case_id: str
+    role: str
+    text: str
+
+
+class AuthMeResponse(BaseModel):
+    email: str
+    role: str
+    tenant_id: str
+    client_id: str
 
 
 class ProcessLog(BaseModel):
@@ -261,6 +303,92 @@ async def analyze_document(request: DocumentAnalysisRequest, background_tasks: B
     return {"status": "processing", "document_id": request.document_id}
 
 
+def classify_document_type(file_name: str) -> str:
+    name = (file_name or "").strip().lower()
+    if any(keyword in name for keyword in ["utility", "bill"]):
+        return "Utility Bill"
+    if any(keyword in name for keyword in ["license", "id"]):
+        return "Driver's License"
+    if any(keyword in name for keyword in ["bureau", "credit"]):
+        return "Bureau Letter"
+    return "Unknown Document"
+
+
+def build_upload_fallback(file_name: str, source: str, ai_error: Optional[str] = None) -> Dict[str, Any]:
+    document_type = classify_document_type(file_name)
+    payload: Dict[str, Any] = {
+        "document_type": document_type,
+        "extracted_data": {
+            "name": "Pending verification",
+            "address": "Pending verification",
+            "account_numbers": [],
+        },
+        "action_required": document_type == "Utility Bill",
+        "status": "analyzed",
+        "source": source,
+    }
+    if ai_error:
+        payload["ai_error"] = ai_error
+    return payload
+
+
+def normalize_upload_payload(file_name: str, ai_payload: Dict[str, Any]) -> Dict[str, Any]:
+    fallback_type = classify_document_type(file_name)
+    document_type = ai_payload.get("document_type") or fallback_type
+    extracted_data = ai_payload.get("extracted_data") if isinstance(ai_payload.get("extracted_data"), dict) else {}
+    action_required = ai_payload.get("action_required")
+    if isinstance(action_required, str):
+        action_required = action_required.strip() or ""
+    elif isinstance(action_required, bool):
+        action_required = "Address mismatch review" if action_required else ""
+    else:
+        action_required = ""
+
+    return {
+        "document_type": document_type,
+        "confidence_score": float(ai_payload.get("confidence_score", 0.0) or 0.0),
+        "extracted_data": {
+            "name": extracted_data.get("name", "Pending verification"),
+            "address": extracted_data.get("address", "Pending verification"),
+            "account_numbers": extracted_data.get("account_numbers", []),
+            "provider": extracted_data.get("provider"),
+            "service_date": extracted_data.get("service_date"),
+            "negative_accounts": extracted_data.get("negative_accounts", []),
+        },
+        "action_required": action_required,
+        "flag_for_staff": bool(ai_payload.get("flag_for_staff", document_type == "Unknown Document")),
+        "status": "analyzed",
+        "source": ai_payload.get("source", "ai"),
+        "model": ai_payload.get("model"),
+    }
+
+
+@app.post("/api/v1/analyze-upload")
+async def analyze_upload(request: UploadVisionAnalysisRequest):
+    normalized_name = (request.file_name or "").strip().lower()
+
+    try:
+        if model_manager and model_manager.client:
+            ai_payload = await model_manager.analyze(
+                file_name=request.file_name,
+                mime_type=request.mime_type,
+                base64_image=request.base64_image,
+                text_input=request.text_input,
+            )
+            return normalize_upload_payload(request.file_name, ai_payload)
+    except Exception as exc:
+        return {
+            "status": "error",
+            "message": "System Overloaded. Please retry shortly.",
+            "system_overloaded": True,
+            "source": "model_manager",
+            "ai_error": type(exc).__name__,
+            "fallback": build_upload_fallback(normalized_name, source="heuristic_fallback", ai_error=type(exc).__name__),
+        }
+
+    return normalize_upload_payload(request.file_name, build_upload_fallback(normalized_name, source="heuristic"))
+
+
 @app.post("/api/v1/categorize-transaction")
 async def categorize_transaction(request: TransactionCategorizationRequest):
     agent = FinancialAgent(db_pool)
@@ -324,6 +452,255 @@ async def system_health():
         agents=agents,
         recent_logs=recent_logs,
     )
+
+
+def _portal_state_key(tenant_id: str, client_id: str) -> str:
+    return f"portal_state:{tenant_id}:{client_id}"
+
+
+def _portal_documents_key(tenant_id: str, client_id: str) -> str:
+    return f"portal_docs:{tenant_id}:{client_id}"
+
+
+def _portal_threads_key(tenant_id: str, client_id: str, case_id: str) -> str:
+    return f"portal_thread:{tenant_id}:{client_id}:{case_id}"
+
+
+def _resolve_role_from_email(email: str) -> str:
+    normalized = (email or "").strip().lower()
+    admins = {item.lower() for item in parse_csv_env("ADMIN_EMAILS", "")}
+    advisors = {item.lower() for item in parse_csv_env("ADVISOR_EMAILS", "owner@demo.test")}
+    if normalized and normalized in admins:
+        return "admin"
+    if normalized and normalized in advisors:
+        return "advisor"
+    return "client"
+
+
+@app.get("/api/v1/auth/me", response_model=AuthMeResponse)
+async def auth_me(
+    email: str,
+    tenant_id: str = "00000000-0000-0000-0000-000000000001",
+    client_id: str = "11111111-1111-1111-1111-111111111111",
+):
+    return AuthMeResponse(
+        email=(email or "").strip().lower(),
+        role=_resolve_role_from_email(email),
+        tenant_id=tenant_id,
+        client_id=client_id,
+    )
+
+
+@app.get("/api/v1/portal/state/{client_id}")
+async def get_portal_state(client_id: str, tenant_id: str):
+    key = _portal_state_key(tenant_id, client_id)
+    if redis_client:
+        try:
+            saved = await redis_client.get(key)
+            if saved:
+                try:
+                    parsed = json.loads(saved)
+                except Exception:
+                    parsed = {}
+                return {"client_id": client_id, "tenant_id": tenant_id, "payload": parsed, "source": "redis"}
+        except Exception:
+            pass
+
+    payload = portal_state_fallback.get(key)
+    return {
+        "client_id": client_id,
+        "tenant_id": tenant_id,
+        "payload": payload or {},
+        "source": "memory",
+    }
+
+
+@app.put("/api/v1/portal/state/{client_id}")
+async def put_portal_state(client_id: str, request: PortalStateRequest):
+    key = _portal_state_key(request.tenant_id, client_id)
+    portal_state_fallback[key] = request.payload
+
+    if redis_client:
+        try:
+            await redis_client.set(key, json.dumps(request.payload))
+        except Exception:
+            pass
+
+    return {"status": "saved", "client_id": client_id, "tenant_id": request.tenant_id}
+
+
+@app.get("/api/v1/portal/documents/{client_id}")
+async def get_portal_documents(client_id: str, tenant_id: str):
+    key = _portal_documents_key(tenant_id, client_id)
+    if db_pool:
+        try:
+            async with db_pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """
+                    SELECT document_id, case_id, payload, updated_at
+                    FROM portal_documents
+                    WHERE tenant_id = $1 AND client_id = $2
+                    ORDER BY updated_at DESC
+                    """,
+                    tenant_id,
+                    client_id,
+                )
+                return {
+                    "client_id": client_id,
+                    "tenant_id": tenant_id,
+                    "documents": [
+                        {
+                            "document_id": row["document_id"],
+                            "case_id": row["case_id"],
+                            **(row["payload"] or {}),
+                        }
+                        for row in rows
+                    ],
+                    "source": "db",
+                }
+        except Exception:
+            pass
+
+    docs = portal_documents_fallback.get(key, [])
+    return {"client_id": client_id, "tenant_id": tenant_id, "documents": docs, "source": "memory"}
+
+
+@app.post("/api/v1/portal/documents/{client_id}")
+async def upsert_portal_document(client_id: str, request: PortalDocumentRequest):
+    payload = request.document
+    document_id = str(payload.get("id") or payload.get("document_id") or "")
+    if not document_id:
+        return {"status": "ignored", "reason": "document id required"}
+
+    key = _portal_documents_key(request.tenant_id, client_id)
+    existing = portal_documents_fallback.get(key, [])
+    existing = [doc for doc in existing if str(doc.get("id")) != document_id]
+    existing.append(payload)
+    portal_documents_fallback[key] = existing
+
+    if db_pool:
+        try:
+            async with db_pool.acquire() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO portal_documents (tenant_id, client_id, case_id, document_id, payload)
+                    VALUES ($1, $2, $3, $4, $5::jsonb)
+                    ON CONFLICT (tenant_id, client_id, document_id)
+                    DO UPDATE SET
+                        case_id = EXCLUDED.case_id,
+                        payload = EXCLUDED.payload,
+                        updated_at = NOW()
+                    """,
+                    request.tenant_id,
+                    client_id,
+                    request.case_id,
+                    document_id,
+                    json.dumps(payload),
+                )
+        except Exception:
+            pass
+
+    return {"status": "saved", "document_id": document_id}
+
+
+@app.delete("/api/v1/portal/documents/{client_id}/{document_id}")
+async def delete_portal_document(client_id: str, document_id: str, tenant_id: str):
+    key = _portal_documents_key(tenant_id, client_id)
+    portal_documents_fallback[key] = [
+        doc for doc in portal_documents_fallback.get(key, []) if str(doc.get("id")) != str(document_id)
+    ]
+
+    if db_pool:
+        try:
+            async with db_pool.acquire() as conn:
+                await conn.execute(
+                    """
+                    DELETE FROM portal_documents
+                    WHERE tenant_id = $1 AND client_id = $2 AND document_id = $3
+                    """,
+                    tenant_id,
+                    client_id,
+                    document_id,
+                )
+        except Exception:
+            pass
+
+    return {"status": "deleted", "document_id": document_id}
+
+
+@app.get("/api/v1/portal/threads/{client_id}")
+async def get_portal_thread(client_id: str, tenant_id: str, case_id: str):
+    key = _portal_threads_key(tenant_id, client_id, case_id)
+    if db_pool:
+        try:
+            async with db_pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """
+                    SELECT id, role, message, created_at
+                    FROM portal_thread_messages
+                    WHERE tenant_id = $1 AND client_id = $2 AND case_id = $3
+                    ORDER BY created_at ASC
+                    """,
+                    tenant_id,
+                    client_id,
+                    case_id,
+                )
+                return {
+                    "client_id": client_id,
+                    "tenant_id": tenant_id,
+                    "case_id": case_id,
+                    "messages": [
+                        {
+                            "id": str(row["id"]),
+                            "role": row["role"],
+                            "text": row["message"],
+                            "time": row["created_at"].strftime("%H:%M:%S"),
+                        }
+                        for row in rows
+                    ],
+                    "source": "db",
+                }
+        except Exception:
+            pass
+
+    return {
+        "client_id": client_id,
+        "tenant_id": tenant_id,
+        "case_id": case_id,
+        "messages": portal_threads_fallback.get(key, []),
+        "source": "memory",
+    }
+
+
+@app.post("/api/v1/portal/threads/{client_id}")
+async def create_portal_thread_message(client_id: str, request: PortalThreadMessageRequest):
+    key = _portal_threads_key(request.tenant_id, client_id, request.case_id)
+    message = {
+        "id": f"{request.role}-{int(datetime.utcnow().timestamp() * 1000)}",
+        "role": request.role,
+        "text": request.text,
+        "time": datetime.utcnow().strftime("%H:%M:%S"),
+    }
+    portal_threads_fallback.setdefault(key, []).append(message)
+
+    if db_pool:
+        try:
+            async with db_pool.acquire() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO portal_thread_messages (tenant_id, client_id, case_id, role, message)
+                    VALUES ($1, $2, $3, $4, $5)
+                    """,
+                    request.tenant_id,
+                    client_id,
+                    request.case_id,
+                    request.role,
+                    request.text,
+                )
+        except Exception:
+            pass
+
+    return {"status": "saved", "message": message}
 
 
 @app.websocket("/ws/system")
