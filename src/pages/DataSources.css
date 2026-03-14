@@ -1,0 +1,127 @@
+.ds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.ds-card {
+  background: #16213e;
+  border: 1px solid #1e2d50;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color 0.2s;
+}
+
+.ds-card.connected {
+  border-color: rgba(52, 199, 123, 0.35);
+}
+
+.ds-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ds-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e0e0e0;
+}
+
+.ds-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.ds-status-dot.online {
+  background: #34c77b;
+  box-shadow: 0 0 6px rgba(52, 199, 123, 0.6);
+}
+
+.ds-status-dot.offline {
+  background: #e94560;
+}
+
+.ds-type {
+  font-size: 0.8rem;
+  color: #e94560;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ds-host {
+  font-size: 0.85rem;
+  color: #9a9ab0;
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.ds-sync {
+  font-size: 0.78rem;
+  color: #4a4a6a;
+}
+
+.ds-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-toggle {
+  padding: 0.4rem 0.85rem;
+  border-radius: 7px;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-toggle.connect {
+  background: rgba(52, 199, 123, 0.2);
+  color: #34c77b;
+  border: 1px solid rgba(52, 199, 123, 0.4);
+}
+
+.btn-toggle.disconnect {
+  background: rgba(233, 69, 96, 0.15);
+  color: #e94560;
+  border: 1px solid rgba(233, 69, 96, 0.3);
+}
+
+.btn-toggle:hover {
+  opacity: 0.8;
+}
+
+.ds-add {
+  border: 2px dashed #1e2d50;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  min-height: 180px;
+  transition: border-color 0.2s;
+}
+
+.ds-add:hover {
+  border-color: #e94560;
+}
+
+.ds-add-icon {
+  font-size: 2rem;
+  color: #4a4a6a;
+}
+
+.ds-add-label {
+  font-size: 0.9rem;
+  color: #9a9ab0;
+}

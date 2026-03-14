@@ -2,9 +2,9 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: light dark;
+  color-scheme: dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #1a1a2e;
+  background-color: #0d1526;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -17,77 +17,14 @@
   padding: 0;
 }
 
-.dashboard {
-  min-height: 100vh;
+.app-layout {
   display: flex;
-  flex-direction: column;
+  min-height: 100vh;
 }
 
-.header {
-  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
-  padding: 2rem;
-  text-align: center;
-  border-bottom: 2px solid #e94560;
-}
-
-.header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #e0e0e0;
-}
-
-.subtitle {
-  color: #e94560;
-  font-size: 1rem;
-  margin-top: 0.5rem;
-}
-
-.main {
+.app-content {
   flex: 1;
-  padding: 2rem;
-}
-
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.5rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.card {
-  background: #16213e;
-  border: 1px solid #0f3460;
-  border-radius: 12px;
-  padding: 1.75rem;
-  transition: transform 0.2s, box-shadow 0.2s;
-  cursor: pointer;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(233, 69, 96, 0.2);
-  border-color: #e94560;
-}
-
-.card h2 {
-  font-size: 1.25rem;
-  margin-bottom: 0.75rem;
-  color: #e0e0e0;
-}
-
-.card p {
-  color: #9a9ab0;
-  font-size: 0.95rem;
-  line-height: 1.6;
-}
-
-.footer {
-  background: #16213e;
-  text-align: center;
-  padding: 1rem;
-  color: #9a9ab0;
-  font-size: 0.875rem;
-  border-top: 1px solid #0f3460;
+  overflow-y: auto;
+  background: #0d1526;
 }
 

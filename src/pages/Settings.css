@@ -1,0 +1,126 @@
+.settings-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.settings-section {
+  background: #16213e;
+  border: 1px solid #1e2d50;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.settings-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9a9ab0;
+  padding: 0.85rem 1.5rem;
+  background: #0f1b35;
+  border-bottom: 1px solid #1e2d50;
+}
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #1e2d50;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 180px;
+}
+
+.settings-label {
+  font-size: 0.95rem;
+  color: #e0e0e0;
+  font-weight: 500;
+}
+
+.settings-desc {
+  font-size: 0.82rem;
+  color: #9a9ab0;
+}
+
+.settings-control {
+  flex-shrink: 0;
+}
+
+/* Toggle switch */
+.toggle {
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  padding: 0;
+}
+
+.toggle.on {
+  background: #e94560;
+}
+
+.toggle.off {
+  background: #1e2d50;
+}
+
+.toggle-knob {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 3px;
+  transition: left 0.2s;
+}
+
+.toggle.on .toggle-knob {
+  left: 23px;
+}
+
+.toggle.off .toggle-knob {
+  left: 3px;
+}
+
+/* Inputs */
+.settings-input,
+.settings-select {
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid #1e2d50;
+  background: #0f1b35;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  min-width: 200px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.settings-input:focus,
+.settings-select:focus {
+  border-color: #e94560;
+}
+
+.settings-select option {
+  background: #0f1b35;
+}

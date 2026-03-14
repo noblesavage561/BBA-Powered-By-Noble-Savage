@@ -1,0 +1,96 @@
+.reports-toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #1e2d50;
+  background: #16213e;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.search-input::placeholder {
+  color: #4a4a6a;
+}
+
+.search-input:focus {
+  border-color: #e94560;
+}
+
+.reports-table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #1e2d50;
+}
+
+.reports-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.reports-table th {
+  background: #0f1b35;
+  color: #9a9ab0;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reports-table td {
+  padding: 0.85rem 1rem;
+  color: #c8c8e0;
+  border-top: 1px solid #1e2d50;
+}
+
+.reports-table tbody tr:hover {
+  background: #16213e;
+}
+
+.report-name {
+  font-weight: 600;
+  color: #e0e0e0 !important;
+}
+
+.empty-row {
+  text-align: center;
+  color: #4a4a6a;
+  padding: 2rem !important;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.badge-ready {
+  background: rgba(52, 199, 123, 0.15);
+  color: #34c77b;
+}
+
+.badge-running {
+  background: rgba(255, 196, 0, 0.15);
+  color: #ffc400;
+}
+
+.badge-failed {
+  background: rgba(233, 69, 96, 0.15);
+  color: #e94560;
+}
+
