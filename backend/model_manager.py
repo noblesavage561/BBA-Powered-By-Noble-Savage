@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 from openai import AsyncOpenAI, BadRequestError
 
@@ -17,7 +17,7 @@ class ModelManager:
         self.secondary_model = os.getenv("SECONDARY_MODEL", "x-ai/grok-beta").strip()
         self.third_model = os.getenv("THIRD_MODEL", "openai/gpt-3.5-turbo").strip()
         self.text_only_model = os.getenv("TEXT_ONLY_MODEL", "openai/gpt-3.5-turbo").strip()
-        self.client: Optional[AsyncOpenAI] = None
+        self.client: AsyncOpenAI | None = None
 
         if require_ai_key and not self.api_key:
             raise RuntimeError("AI_API_KEY is required when REQUIRE_AI_KEY is enabled")
@@ -66,10 +66,10 @@ class ModelManager:
         self,
         *,
         file_name: str,
-        mime_type: Optional[str],
-        base64_image: Optional[str],
-        text_input: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        mime_type: str | None,
+        base64_image: str | None,
+        text_input: str | None = None,
+    ) -> dict[str, Any]:
         if not self.client:
             raise RuntimeError("AI client is not configured")
 
@@ -91,7 +91,7 @@ class ModelManager:
             },
         ]
 
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
 
         for index, model in enumerate([m for m in candidate_models if m]):
             try:

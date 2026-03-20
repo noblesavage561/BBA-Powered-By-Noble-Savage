@@ -1,5 +1,5 @@
-from datetime import datetime
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 
@@ -14,7 +14,7 @@ class FundingAgent:
         except (ValueError, TypeError):
             return False
 
-    async def calculate_funding_readiness(self, client_id: str) -> Dict[str, Any]:
+    async def calculate_funding_readiness(self, client_id: str) -> dict[str, Any]:
         if not self._is_valid_uuid(client_id):
             return {
                 "score": 0,
@@ -88,7 +88,7 @@ class FundingAgent:
 
         incorporation_date = client_data["incorporation_date"] if client_data else None
         if incorporation_date:
-            years_in_business = (datetime.now().date() - incorporation_date).days / 365
+            years_in_business = (datetime.now(UTC).date() - incorporation_date).days / 365
         else:
             years_in_business = 1
 
@@ -120,7 +120,7 @@ class FundingAgent:
             return "Close to fundable. Focus on credit score and document completion."
         return "Not ready for funding. Follow the Treatment Plan to improve health."
 
-    async def find_funding_matches(self, client_id: str) -> List[Dict[str, Any]]:
+    async def find_funding_matches(self, client_id: str) -> list[dict[str, Any]]:
         if not self._is_valid_uuid(client_id):
             return []
 
@@ -142,7 +142,7 @@ class FundingAgent:
                 """
             )
 
-        matches: List[Dict[str, Any]] = []
+        matches: list[dict[str, Any]] = []
         for partner in partners:
             match_score = 0
             reasons = []
@@ -184,5 +184,5 @@ class FundingAgent:
         matches.sort(key=lambda x: x["match_score"], reverse=True)
         return matches[:5]
 
-    async def get_funding_readiness(self, client_id: str) -> Dict[str, Any]:
+    async def get_funding_readiness(self, client_id: str) -> dict[str, Any]:
         return await self.calculate_funding_readiness(client_id)
