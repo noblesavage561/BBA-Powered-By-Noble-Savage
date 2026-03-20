@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -88,7 +88,7 @@ class FundingAgent:
 
         incorporation_date = client_data["incorporation_date"] if client_data else None
         if incorporation_date:
-            years_in_business = (datetime.now().date() - incorporation_date).days / 365
+            years_in_business = (datetime.now(UTC).date() - incorporation_date).days / 365
         else:
             years_in_business = 1
 

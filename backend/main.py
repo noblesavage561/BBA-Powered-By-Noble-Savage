@@ -280,8 +280,9 @@ async def get_agent_health(pool: asyncpg.Pool | None) -> dict[str, Any]:
         return {"active": 0, "pending": 0, "completed": 0}
 
 
-def generate_process_logs() -> list[ProcessLog]:
-    now = datetime.now().strftime("%H:%M:%S")
+def generate_mock_process_logs() -> list[ProcessLog]:
+    """Returns static sample logs for demo/testing. Replace with real log source in production."""
+    now = datetime.now(UTC).strftime("%H:%M:%S")
     return [
         ProcessLog(timestamp=now, message="Health check passed: All systems nominal", type="success", category="system"),
         ProcessLog(timestamp=now, message="Cache refreshed for client session data", type="info", category="cache"),
@@ -443,7 +444,7 @@ async def system_health():
     database = await get_database_health(db_pool)
     redis_health = await get_redis_health(redis_client)
     agents = await get_agent_health(db_pool)
-    recent_logs = generate_process_logs()
+    recent_logs = generate_mock_process_logs()
 
     return SystemHealthResponse(
         graphql=graphql,

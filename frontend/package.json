@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "framer-motion": "11.18.2",
-    "lucide-react": "0.503.0",
+    "lucide-react": "0.577.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-router-dom": "^6.30.3",
@@ -22,12 +22,12 @@
     "vite": "^5.4.21"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "^9.39.4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@vitest/coverage-v8": "^2.1.9",
-    "eslint": "^10.1.0",
+    "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^17.4.0",
