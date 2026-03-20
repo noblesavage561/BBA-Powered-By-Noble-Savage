@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 import openai
 
@@ -41,8 +41,8 @@ class FinancialAgent:
         self,
         description: str,
         amount: float,
-        previous_context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        previous_context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         if not self.has_openai_key or not self.llm:
             desc = (description or "").lower()
             if "rent" in desc or "lease" in desc:
@@ -121,7 +121,7 @@ Output ONLY valid JSON in this format:
                 "reasoning": "Fallback categorization used after OpenAI request failure.",
             }
 
-    async def get_financial_summary(self, client_id: str) -> Dict[str, Any]:
+    async def get_financial_summary(self, client_id: str) -> dict[str, Any]:
         if not self.db_pool:
             return {
                 "total_income": 0,

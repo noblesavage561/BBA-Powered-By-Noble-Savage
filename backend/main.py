@@ -1,10 +1,10 @@
+import json
 import os
 import random
-import json
 from asyncio import sleep
 from contextlib import asynccontextmanager
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 import asyncpg
 import redis.asyncio as redis
@@ -21,13 +21,13 @@ from agents.intake_agent import IntakeAgent
 from model_manager import ModelManager
 
 # Database/Redis clients are optional for local execution.
-db_pool: Optional[asyncpg.Pool] = None
-redis_client: Optional[redis.Redis] = None
-last_30_latencies: List[int] = []
-portal_state_fallback: Dict[str, Dict[str, Any]] = {}
-portal_documents_fallback: Dict[str, List[Dict[str, Any]]] = {}
-portal_threads_fallback: Dict[str, List[Dict[str, Any]]] = {}
-model_manager: Optional[ModelManager] = None
+db_pool: asyncpg.Pool | None = None
+redis_client: redis.Redis | None = None
+last_30_latencies: list[int] = []
+portal_state_fallback: dict[str, dict[str, Any]] = {}
+portal_documents_fallback: dict[str, list[dict[str, Any]]] = {}
+portal_threads_fallback: dict[str, list[dict[str, Any]]] = {}
+model_manager: ModelManager | None = None
 
 
 @asynccontextmanager
@@ -73,7 +73,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="BBA Services OS - AI Engine", version="1.0.0", lifespan=lifespan)
 
 
-def parse_csv_env(name: str, default: str) -> List[str]:
+def parse_csv_env(name: str, default: str) -> list[str]:
     raw = os.getenv(name, default)
     return [item.strip() for item in raw.split(",") if item.strip()]
 
@@ -105,16 +105,16 @@ class DocumentAnalysisRequest(BaseModel):
 
 class UploadVisionAnalysisRequest(BaseModel):
     file_name: str
-    base64_image: Optional[str] = None
-    mime_type: Optional[str] = None
-    text_input: Optional[str] = None
+    base64_image: str | None = None
+    mime_type: str | None = None
+    text_input: str | None = None
 
 
 class TransactionCategorizationRequest(BaseModel):
     transaction_id: str
     description: str
     amount: float
-    previous_context: Optional[Dict[str, Any]] = None
+    previous_context: dict[str, Any] | None = None
 
 
 class TreatmentPlanRequest(BaseModel):
@@ -124,13 +124,13 @@ class TreatmentPlanRequest(BaseModel):
 
 class PortalStateRequest(BaseModel):
     tenant_id: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
 
 
 class PortalDocumentRequest(BaseModel):
     tenant_id: str
     case_id: str
-    document: Dict[str, Any]
+    document: dict[str, Any]
 
 
 class PortalThreadMessageRequest(BaseModel):
@@ -155,14 +155,14 @@ class ProcessLog(BaseModel):
 
 
 class SystemHealthResponse(BaseModel):
-    graphql: Dict[str, Any]
-    database: Dict[str, Any]
-    redis: Dict[str, Any]
-    agents: Dict[str, Any]
-    recent_logs: List[ProcessLog]
+    graphql: dict[str, Any]
+    database: dict[str, Any]
+    redis: dict[str, Any]
+    agents: dict[str, Any]
+    recent_logs: list[ProcessLog]
 
 
-async def get_graphql_health() -> Dict[str, Any]:
+async def get_graphql_health() -> dict[str, Any]:
     global last_30_latencies
     current_latency = 45 + random.randint(0, 100)
     last_30_latencies.append(current_latency)
@@ -177,7 +177,7 @@ async def get_graphql_health() -> Dict[str, Any]:
     }
 
 
-async def get_database_health(pool: Optional[asyncpg.Pool]) -> Dict[str, Any]:
+async def get_database_health(pool: asyncpg.Pool | None) -> dict[str, Any]:
     if not pool:
         return {
             "activeConnections": 0,
@@ -216,7 +216,7 @@ async def get_database_health(pool: Optional[asyncpg.Pool]) -> Dict[str, Any]:
         }
 
 
-async def get_redis_health(client: Optional[redis.Redis]) -> Dict[str, Any]:
+async def get_redis_health(client: redis.Redis | None) -> dict[str, Any]:
     if not client:
         return {
             "hitRate": 0,
@@ -254,7 +254,7 @@ async def get_redis_health(client: Optional[redis.Redis]) -> Dict[str, Any]:
         }
 
 
-async def get_agent_health(pool: Optional[asyncpg.Pool]) -> Dict[str, Any]:
+async def get_agent_health(pool: asyncpg.Pool | None) -> dict[str, Any]:
     if not pool:
         return {"active": 0, "pending": 0, "completed": 0}
 
@@ -280,7 +280,7 @@ async def get_agent_health(pool: Optional[asyncpg.Pool]) -> Dict[str, Any]:
         return {"active": 0, "pending": 0, "completed": 0}
 
 
-def generate_process_logs() -> List[ProcessLog]:
+def generate_process_logs() -> list[ProcessLog]:
     now = datetime.now().strftime("%H:%M:%S")
     return [
         ProcessLog(timestamp=now, message="Health check passed: All systems nominal", type="success", category="system"),
@@ -314,9 +314,9 @@ def classify_document_type(file_name: str) -> str:
     return "Unknown Document"
 
 
-def build_upload_fallback(file_name: str, source: str, ai_error: Optional[str] = None) -> Dict[str, Any]:
+def build_upload_fallback(file_name: str, source: str, ai_error: str | None = None) -> dict[str, Any]:
     document_type = classify_document_type(file_name)
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "document_type": document_type,
         "extracted_data": {
             "name": "Pending verification",
@@ -332,7 +332,7 @@ def build_upload_fallback(file_name: str, source: str, ai_error: Optional[str] =
     return payload
 
 
-def normalize_upload_payload(file_name: str, ai_payload: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_upload_payload(file_name: str, ai_payload: dict[str, Any]) -> dict[str, Any]:
     fallback_type = classify_document_type(file_name)
     document_type = ai_payload.get("document_type") or fallback_type
     extracted_data = ai_payload.get("extracted_data") if isinstance(ai_payload.get("extracted_data"), dict) else {}
@@ -431,7 +431,7 @@ async def health_check():
     redis_connected = redis_client is not None
     return {
         "status": "healthy" if db_connected and redis_connected else "degraded",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "db_connected": db_connected,
         "redis_connected": redis_connected,
     }
@@ -676,10 +676,10 @@ async def get_portal_thread(client_id: str, tenant_id: str, case_id: str):
 async def create_portal_thread_message(client_id: str, request: PortalThreadMessageRequest):
     key = _portal_threads_key(request.tenant_id, client_id, request.case_id)
     message = {
-        "id": f"{request.role}-{int(datetime.utcnow().timestamp() * 1000)}",
+        "id": f"{request.role}-{int(datetime.now(UTC).timestamp() * 1000)}",
         "role": request.role,
         "text": request.text,
-        "time": datetime.utcnow().strftime("%H:%M:%S"),
+        "time": datetime.now(UTC).strftime("%H:%M:%S"),
     }
     portal_threads_fallback.setdefault(key, []).append(message)
 

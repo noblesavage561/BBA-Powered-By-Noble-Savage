@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# Restrict the GITHUB_TOKEN to the minimum required permissions.
+permissions:
+  contents: read
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Backend — lint + test (Python / FastAPI)
+  # ────────────────────────────────────────────────────────────────────────────
+  backend:
+    name: Backend (Python)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check . --output-format=github
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Frontend — install + lint + build (React / Vite)
+  # ────────────────────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend (Node)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint --if-present
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test --if-present
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # GraphQL gateway — install + syntax check (Node / Apollo)
+  # ────────────────────────────────────────────────────────────────────────────
+  graphql:
+    name: GraphQL Gateway (Node)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: graphql
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: graphql/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Syntax check
+        run: node --check server.js

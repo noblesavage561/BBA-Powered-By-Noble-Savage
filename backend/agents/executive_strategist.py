@@ -1,7 +1,7 @@
 import json
 import os
-from datetime import datetime
-from typing import Any, Dict
+from datetime import UTC, datetime
+from typing import Any
 
 from openai import OpenAI
 
@@ -19,10 +19,10 @@ Always provide responses in a structured Decision Matrix style.
     async def synthesize_treatment_plan(
         self,
         client_id: str,
-        financial_data: Dict[str, Any],
-        compliance_data: Dict[str, Any],
-        funding_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        financial_data: dict[str, Any],
+        compliance_data: dict[str, Any],
+        funding_data: dict[str, Any],
+    ) -> dict[str, Any]:
         if not self.has_openai_key:
             fallback_plan = {
                 "health_score": 72,
@@ -33,21 +33,21 @@ Always provide responses in a structured Decision Matrix style.
                         "description": "Ensure the latest statement is available for underwriting review.",
                         "category": "compliance",
                         "priority": "high",
-                        "due_date": datetime.utcnow().date().isoformat(),
+                        "due_date": datetime.now(UTC).date().isoformat(),
                     },
                     {
                         "title": "Review Expense Categories",
                         "description": "Confirm recurring expenses are correctly categorized for tax readiness.",
                         "category": "bookkeeping",
                         "priority": "medium",
-                        "due_date": datetime.utcnow().date().isoformat(),
+                        "due_date": datetime.now(UTC).date().isoformat(),
                     },
                 ],
             }
             return {
                 "success": True,
                 "treatment_plan": fallback_plan,
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
             }
 
         llm = OpenAI()
@@ -73,7 +73,7 @@ Output JSON with health_score, insight, and items.
             return {
                 "success": True,
                 "treatment_plan": result,
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
             }
         except Exception as e:
             fallback_plan = {
@@ -85,7 +85,7 @@ Output JSON with health_score, insight, and items.
                         "description": "Retry treatment plan generation once AI connectivity is restored.",
                         "category": "operations",
                         "priority": "medium",
-                        "due_date": datetime.utcnow().date().isoformat(),
+                        "due_date": datetime.now(UTC).date().isoformat(),
                     }
                 ],
             }
@@ -93,5 +93,5 @@ Output JSON with health_score, insight, and items.
                 "success": True,
                 "error": str(e),
                 "treatment_plan": fallback_plan,
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
             }
